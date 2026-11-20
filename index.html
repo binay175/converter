@@ -131,6 +131,10 @@
 
     .card.active .hint { display: block; }
 
+    .link-card { display: block; text-decoration: none; }
+    .link-card .card-title { margin-bottom: 0; color: var(--accent); }
+    .link-card:hover, .link-card:focus { background: var(--card-hover); }
+
     footer {
       text-align: center;
       color: var(--text-dim);
@@ -153,6 +157,10 @@
     </header>
 
     <div id="converters"></div>
+
+    <a class="card link-card" href="gold.html">
+      <span class="card-title"><span class="icon">🪙</span>Troy Ounce · Gram · USD/INR prices →</span>
+    </a>
 
     <footer>
       Bidirectional conversions · works offline<br />

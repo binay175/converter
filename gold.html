@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#0f1220" />
+  <title>Troy Ounce · Gram · USD/INR</title>
+  <style>
+    :root {
+      --bg: #0f1220;
+      --card: #1a1f33;
+      --card-hover: #212745;
+      --input-bg: #10131f;
+      --border: #2c3352;
+      --border-focus: #5b8def;
+      --text: #e8ebf5;
+      --text-dim: #8a92b2;
+      --accent: #5b8def;
+      --gold: #e6c15a;
+      --error: #ef6b6b;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px 16px 48px;
+      line-height: 1.5;
+    }
+
+    .wrap { max-width: 1280px; margin: 0 auto; }
+
+    nav { font-size: 0.85rem; margin-bottom: 8px; }
+    nav a { color: var(--accent); text-decoration: none; }
+    nav a:hover, nav a:focus { text-decoration: underline; }
+
+    .page-head { text-align: center; margin: 4px 0 22px; }
+    .page-head h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
+    .page-head p { color: var(--text-dim); font-size: 0.9rem; margin-top: 4px; }
+
+    /* Small display-only USD -> INR box */
+    .fx-badge {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .fx-badge .fx-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #4cc38a;
+      display: inline-block;
+    }
+    .live-dot.off { background: var(--error); }
+
+    .fx-badge .fx-value { font-size: 1.25rem; font-weight: 700; color: var(--gold); margin: 2px 0; }
+    .fx-badge .fx-meta { font-size: 0.72rem; color: var(--text-dim); }
+    .fx-badge .fx-meta a { color: var(--text-dim); }
+    .fx-badge .fx-meta.err { color: var(--error); }
+
+    /* Three columns: weight + price (left) | value (center) | live FX (right) */
+    .grid {
+      display: grid;
+      /* Fixed-width columns packed together and centered as a group */
+      grid-template-columns: minmax(0, 420px) minmax(0, 440px) minmax(0, 240px);
+      justify-content: center;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .col { display: flex; flex-direction: column; gap: 16px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 18px 20px;
+      transition: background 0.15s ease;
+    }
+
+    .card:focus-within { background: var(--card-hover); }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .spacer { flex: 1; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: end;
+      gap: 10px;
+    }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+
+    .field label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 1.05rem;
+      padding: 12px;
+      outline: none;
+      transition: border-color 0.15s ease;
+      -moz-appearance: textfield;
+      font-family: inherit;
+    }
+
+    .field input::-webkit-outer-spin-button,
+    .field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .field input:focus, .field select:focus { border-color: var(--border-focus); }
+    .field input::placeholder { color: #4b5375; }
+
+    .swap { color: var(--text-dim); font-size: 1.1rem; padding-bottom: 12px; user-select: none; }
+
+    .hint {
+      margin-top: 12px;
+      font-size: 0.82rem;
+      color: var(--accent);
+      background: rgba(91, 141, 239, 0.10);
+      border: 1px solid rgba(91, 141, 239, 0.28);
+      border-radius: 10px;
+      padding: 8px 12px;
+    }
+
+    .status { margin-top: 10px; font-size: 0.78rem; color: var(--text-dim); }
+    .status.err { color: var(--error); }
+
+    button {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover, button:focus-visible { border-color: var(--border-focus); outline: none; }
+    button:disabled { opacity: 0.5; cursor: default; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th, td { padding: 9px 6px; text-align: right; border-bottom: 1px solid var(--border); }
+    th:first-child, td:first-child { text-align: left; }
+    th {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+    tr:last-child td { border-bottom: none; }
+    td.inr { color: var(--gold); font-weight: 600; }
+    td.wt { color: var(--accent); font-weight: 600; }
+
+    .mt { margin-top: 14px; }
+
+    footer { text-align: center; color: var(--text-dim); font-size: 0.78rem; margin-top: 24px; }
+    footer a { color: var(--text-dim); }
+
+    /* Tablet: FX on top spanning full width, then left | center */
+    @media (max-width: 1000px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .col-right { grid-column: 1 / -1; order: -1; }
+    }
+
+    /* Phone: single column — FX, value, weight, price */
+    @media (max-width: 680px) {
+      .grid { grid-template-columns: 1fr; }
+      .col-left, .col-center { display: contents; }
+      .col-right { order: 0; }
+      .col-center > section:first-child { order: 1; }
+      .col-center > section:last-child { order: 2; }
+      .col-left > section:first-child { order: 3; }
+      .col-left > section:last-child { order: 4; }
+    }
+
+    @media (max-width: 520px) {
+      .page-head h1 { font-size: 1.4rem; }
+      .row { gap: 8px; }
+      .field input, .field select { font-size: 1rem; padding: 11px 10px; }
+      table { font-size: 0.88rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav><a href="./">← Quick Converters</a></nav>
+
+    <header class="page-head">
+      <h1>Troy Ounce · Gram · USD/INR</h1>
+      <p>Live precious-metal prices in USD and INR, plus weight conversion.</p>
+    </header>
+
+    <div class="grid">
+      <!-- Left column: weight converter above price table -->
+      <div class="col col-left">
+        <section class="card" aria-labelledby="t-weight">
+          <div class="card-title" id="t-weight"><span aria-hidden="true">⚖️</span>Troy Ounce ↔ Gram</div>
+          <div class="row">
+            <div class="field">
+              <label for="ozt">Troy ounces</label>
+              <input id="ozt" type="number" inputmode="decimal" placeholder="0" autocomplete="off" min="0" />
+            </div>
+            <div class="swap" aria-hidden="true">⇌</div>
+            <div class="field">
+              <label for="grams">Grams</label>
+              <input id="grams" type="number" inputmode="decimal" placeholder="0" autocomplete="off" min="0" />
+            </div>
+          </div>
+          <div class="hint">1 troy ounce = 31.1035 grams · 1 gram = 0.03215 troy ounce</div>
+        </section>
+
+        <section class="card" aria-labelledby="t-price">
+          <div class="card-title" id="t-price">
+            <span aria-hidden="true">🪙</span>Price per Ounce &amp; Gram
+            <span class="spacer"></span>
+            <button id="refreshMetal" type="button">↻ Refresh</button>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="metal">Metal</label>
+              <select id="metal">
+                <option value="XAU">Gold (24K)</option>
+                <option value="XAG">Silver</option>
+                <option value="XPT">Platinum</option>
+                <option value="XPD">Palladium</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="spot">USD per troy oz</label>
+              <input id="spot" type="number" inputmode="decimal" step="0.01" min="0" autocomplete="off" />
+            </div>
+          </div>
+          <div class="status" id="metalStatus" role="status" aria-live="polite">Loading price…</div>
+
+          <table class="mt" aria-label="Price breakdown">
+            <thead><tr><th scope="col">Unit</th><th scope="col">USD</th><th scope="col">INR</th></tr></thead>
+            <tbody>
+              <tr><td>1 troy ounce</td><td id="pOzUsd">–</td><td class="inr" id="pOzInr">–</td></tr>
+              <tr><td>1 gram</td><td id="pGUsd">–</td><td class="inr" id="pGInr">–</td></tr>
+              <tr><td>10 grams</td><td id="p10Usd">–</td><td class="inr" id="p10Inr">–</td></tr>
+              <tr><td>1 kilogram</td><td id="pKgUsd">–</td><td class="inr" id="pKgInr">–</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <!-- Center column: value of my quantity -->
+      <div class="col col-center">
+        <section class="card" aria-labelledby="t-value">
+          <div class="card-title" id="t-value"><span aria-hidden="true">🧮</span>Value of My Quantity</div>
+          <div class="row2">
+            <div class="field">
+              <label for="qty">Quantity</label>
+              <input id="qty" type="number" inputmode="decimal" placeholder="0" autocomplete="off" min="0" />
+            </div>
+            <div class="field">
+              <label for="qtyUnit">Unit</label>
+              <select id="qtyUnit">
+                <option value="g">Grams</option>
+                <option value="ozt">Troy ounces</option>
+                <option value="kg">Kilograms</option>
+              </select>
+            </div>
+          </div>
+          <table class="mt" aria-label="Quantity value">
+            <tbody>
+              <tr><td id="eqLabel">Equivalent in troy ounces</td><td class="wt" id="vEq">–</td></tr>
+              <tr><td>Value in USD</td><td id="vUsd">–</td></tr>
+              <tr><td>Value in INR</td><td class="inr" id="vInr">–</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="card" aria-labelledby="t-amount">
+          <div class="card-title" id="t-amount"><span aria-hidden="true">💰</span>How Much Can I Buy?</div>
+          <div class="row2">
+            <div class="field">
+              <label for="amt">Amount</label>
+              <input id="amt" type="number" inputmode="decimal" placeholder="0" autocomplete="off" min="0" />
+            </div>
+            <div class="field">
+              <label for="amtCur">Currency</label>
+              <select id="amtCur">
+                <option value="USD">US Dollars ($)</option>
+                <option value="INR">Indian Rupees (₹)</option>
+              </select>
+            </div>
+          </div>
+          <table class="mt" aria-label="Quantity for amount">
+            <tbody>
+              <tr><td>Troy ounces</td><td class="wt" id="aOzt">–</td></tr>
+              <tr><td>Grams</td><td class="wt" id="aG">–</td></tr>
+              <tr><td id="aOtherLabel">Equivalent in INR</td><td class="inr" id="aOther">–</td></tr>
+            </tbody>
+          </table>
+          <div class="status" id="aNote">Based on the selected metal's spot price.</div>
+        </section>
+      </div>
+
+      <!-- Right column: display-only FX rate -->
+      <div class="col col-right">
+        <aside class="fx-badge" aria-label="USD to INR exchange rate">
+          <div class="fx-label"><span class="live-dot" id="fxDot" aria-hidden="true"></span>Live USD → INR</div>
+          <div class="fx-value" id="fxValue">$1 = ₹ –</div>
+          <div class="fx-meta" id="fxMeta" role="status" aria-live="polite">Loading rate…</div>
+          <div class="fx-meta">Source: <a href="https://www.exchangerate-api.com" rel="noopener">ExchangeRate-API</a></div>
+        </aside>
+      </div>
+    </div>
+
+    <footer>
+      Spot prices only — Indian retail prices also include import duty, GST and making charges.<br />
+      Metal prices: <a href="https://gold-api.com" rel="noopener">gold-api.com</a> ·
+      USD/INR: <a href="https://www.exchangerate-api.com" rel="noopener">ExchangeRate-API</a><br />
+      &copy; 2026 BinayB. All rights reserved.
+    </footer>
+  </div>
+
+  <script>
+    // 1 troy ounce is exactly 31.1034768 grams (international definition).
+    const G_PER_OZT = 31.1034768;
+    const CACHE_KEY = "gold-page-cache-v1";
+
+    const $ = (id) => document.getElementById(id);
+
+    // Plain number formatting for input boxes: trim float noise and trailing zeros.
+    function fmt(n) {
+      if (!isFinite(n)) return "";
+      return parseFloat(n.toFixed(6)).toString();
+    }
+
+    const usdFmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+    const inrFmt = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
+    const wtFmt  = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
+    const money = (n, f) => (isFinite(n) ? f.format(n) : "–");
+
+    // Current USD -> INR rate (display-only; set by fetchFx).
+    let fxRate = NaN;
+
+    // Remember the last good rates so the page still works offline.
+    function loadCache() {
+      try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || {}; } catch { return {}; }
+    }
+    function saveCache(patch) {
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ...loadCache(), ...patch })); } catch { /* ignore quota/private mode */ }
+    }
+
+    function setStatus(el, text, isErr) {
+      el.textContent = text;
+      el.classList.toggle("err", !!isErr);
+    }
+
+    const num = (el) => parseFloat(el.value);
+
+    // ---------- Troy ounce <-> gram ----------
+    $("ozt").addEventListener("input", () => {
+      const v = num($("ozt"));
+      $("grams").value = $("ozt").value === "" || isNaN(v) ? "" : fmt(v * G_PER_OZT);
+    });
+    $("grams").addEventListener("input", () => {
+      const v = num($("grams"));
+      $("ozt").value = $("grams").value === "" || isNaN(v) ? "" : fmt(v / G_PER_OZT);
+    });
+
+    // ---------- USD -> INR (display only) ----------
+    function showFx(rate, text, isErr) {
+      fxRate = rate;
+      $("fxValue").textContent = rate > 0 ? `$1 = ₹${rate.toFixed(4)}` : "$1 = ₹ –";
+      $("fxDot").classList.toggle("off", !!isErr);
+      setStatus($("fxMeta"), text, isErr);
+      renderPrices();
+    }
+
+    async function fetchFx() {
+      try {
+        const res = await fetch("https://open.er-api.com/v6/latest/USD", { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        const rate = data && data.rates && data.rates.INR;
+        if (data.result !== "success" || !(rate > 0)) throw new Error("Unexpected response");
+        const updated = new Date(data.time_last_update_unix * 1000);
+        saveCache({ fxRate: rate, fxUpdated: updated.toISOString() });
+        showFx(rate, `Live · updated ${updated.toLocaleString()}`);
+      } catch (e) {
+        const c = loadCache();
+        if (c.fxRate) {
+          showFx(c.fxRate, `Offline · saved ${new Date(c.fxUpdated).toLocaleString()}`, true);
+        } else {
+          showFx(NaN, "Rate unavailable", true);
+        }
+      }
+    }
+
+    // ---------- Metal price ----------
+    async function fetchMetal() {
+      const symbol = $("metal").value;
+      const status = $("metalStatus");
+      const btn = $("refreshMetal");
+      btn.disabled = true;
+      setStatus(status, "Loading price…");
+      try {
+        const res = await fetch(`https://api.gold-api.com/price/${encodeURIComponent(symbol)}`, { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        if (!(data && data.price > 0)) throw new Error("Unexpected response");
+        const updated = new Date(data.updatedAt);
+        $("spot").value = data.price.toFixed(2);
+        saveCache({ ["spot_" + symbol]: data.price, ["spotUpdated_" + symbol]: updated.toISOString() });
+        setStatus(status, `Live spot price · updated ${updated.toLocaleString()} · source: gold-api.com`);
+      } catch (e) {
+        const c = loadCache();
+        if (c["spot_" + symbol]) {
+          $("spot").value = c["spot_" + symbol].toFixed(2);
+          setStatus(status, `Offline — using saved price from ${new Date(c["spotUpdated_" + symbol]).toLocaleString()}. You can edit it.`, true);
+        } else {
+          $("spot").value = "";
+          setStatus(status, "Couldn't load the live price. Enter USD per troy ounce manually.", true);
+        }
+      } finally {
+        btn.disabled = false;
+        renderPrices();
+      }
+    }
+
+    function renderPrices() {
+      const perOz = num($("spot"));
+      const perG = perOz / G_PER_OZT;
+      const rows = [
+        ["pOz", perOz],
+        ["pG", perG],
+        ["p10", perG * 10],
+        ["pKg", perG * 1000]
+      ];
+      rows.forEach(([id, usd]) => {
+        $(id + "Usd").textContent = perOz > 0 ? money(usd, usdFmt) : "–";
+        $(id + "Inr").textContent = perOz > 0 && fxRate > 0 ? money(usd * fxRate, inrFmt) : "–";
+      });
+      renderValue();
+    }
+
+    $("spot").addEventListener("input", () => {
+      renderPrices();
+      setStatus($("metalStatus"), "Using your manually entered price.");
+    });
+    $("metal").addEventListener("change", fetchMetal);
+    $("refreshMetal").addEventListener("click", fetchMetal);
+
+    // ---------- Value of quantity ----------
+    const GRAMS_PER_UNIT = { g: 1, ozt: G_PER_OZT, kg: 1000 };
+
+    function renderValue() {
+      const unit = $("qtyUnit").value;
+      const qty = num($("qty"));
+      const grams = GRAMS_PER_UNIT[unit] * qty;
+      const perG = num($("spot")) / G_PER_OZT;
+
+      // Equivalent weight: grams/kg -> troy ounces, troy ounces -> grams.
+      if (unit === "ozt") {
+        $("eqLabel").textContent = "Equivalent in grams";
+        $("vEq").textContent = qty > 0 ? `${wtFmt.format(grams)} g` : "–";
+      } else {
+        $("eqLabel").textContent = "Equivalent in troy ounces";
+        $("vEq").textContent = qty > 0 ? `${wtFmt.format(grams / G_PER_OZT)} ozt` : "–";
+      }
+
+      const usd = grams * perG;
+      $("vUsd").textContent = qty > 0 && perG > 0 ? money(usd, usdFmt) : "–";
+      $("vInr").textContent = qty > 0 && perG > 0 && fxRate > 0 ? money(usd * fxRate, inrFmt) : "–";
+      renderAmount();
+    }
+    $("qty").addEventListener("input", renderValue);
+    $("qtyUnit").addEventListener("change", renderValue);
+
+    // ---------- Amount -> quantity ----------
+    function renderAmount() {
+      const cur = $("amtCur").value;
+      const amt = num($("amt"));
+      const perOz = num($("spot"));
+      const metalName = $("metal").selectedOptions ? $("metal").selectedOptions[0].text : "metal";
+      $("aNote").textContent = `Based on the ${metalName} spot price.`;
+
+      // Convert the entered amount to USD first (INR needs the FX rate).
+      const usd = cur === "USD" ? amt : amt / fxRate;
+      const ok = amt > 0 && perOz > 0 && usd > 0 && isFinite(usd);
+      const ozt = ok ? usd / perOz : NaN;
+
+      $("aOzt").textContent = ok ? `${wtFmt.format(ozt)} ozt` : "–";
+      $("aG").textContent   = ok ? `${wtFmt.format(ozt * G_PER_OZT)} g` : "–";
+
+      if (cur === "USD") {
+        $("aOtherLabel").textContent = "Equivalent in INR";
+        $("aOther").textContent = amt > 0 && fxRate > 0 ? money(amt * fxRate, inrFmt) : "–";
+      } else {
+        $("aOtherLabel").textContent = "Equivalent in USD";
+        $("aOther").textContent = amt > 0 && fxRate > 0 ? money(amt / fxRate, usdFmt) : "–";
+      }
+    }
+    $("amt").addEventListener("input", renderAmount);
+    $("amtCur").addEventListener("change", renderAmount);
+
+    // ---------- Init ----------
+    fetchFx();
+    fetchMetal();
+  </script>
+</body>
+</html>
